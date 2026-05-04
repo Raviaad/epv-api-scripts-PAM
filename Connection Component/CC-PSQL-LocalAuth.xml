@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  CyberArk PSM Connection Component: PostgreSQL - Local Authentication
+  =====================================================================
+  Description : Launches psql via PSM using OS-level (local/trust/md5)
+                authentication. No CyberArk credential retrieval is performed;
+                the OS user running the PSM session is trusted by pg_hba.conf.
+
+  Prerequisites:
+    - psql client installed on the PSM server
+    - pg_hba.conf on the target host must allow "local" or host-based "trust"
+      or "md5" for the connecting OS/DB user
+    - The CyberArk Platform linked to this CC should use the
+      "PostgreSQLAccount" platform type (or a custom one with Address,
+      UserName, Port, and Database file categories)
+
+  Usage:
+    1. Import this XML via the CyberArk PVWA web UI:
+         Administration > Connection Components > Import Connection Component
+    2. Associate the Connection Component with a Platform.
+    3. Initiate a PSM session from PVWA against a PostgreSQL account.
+-->
+<ConnectionComponent
+    Id="PSM-PSQL-LocalAuth"
+    DisplayName="PostgreSQL - Local Auth (psql)"
+    Description="Connects to a PostgreSQL database via psql using local OS authentication (trust / md5 in pg_hba.conf). No password is fetched from the Vault."
+    ComponentType="Executable"
+    ConnectionProtocol="Other"
+    Enabled="Yes">
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       TARGET SETTINGS
+       Address, Port, and Database are populated from the CyberArk
+       account's platform properties at session launch time.
+  ═══════════════════════════════════════════════════════════════ -->
+  <TargetSettings>
+    <ClientInstallationPath>C:\Program Files\PostgreSQL\16\bin\psql.exe</ClientInstallationPath>
+    <!-- Adjust the path above to match the psql version installed on PSM -->
+  </TargetSettings>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       USER PARAMETERS
+       These values are resolved from the account stored in the Vault.
+  ═══════════════════════════════════════════════════════════════ -->
+  <UserParameters>
+    <Parameter
+        Name="Address"
+        DisplayName="Host / IP Address"
+        Type="AccountProp"
+        Source="Address"
+        Required="Yes"
+        VisibleInUI="Yes"
+        UserModifiable="No" />
+    <Parameter
+        Name="Port"
+        DisplayName="Port"
+        Type="AccountProp"
+        Source="Port"
+        DefaultValue="5432"
+        Required="No"
+        VisibleInUI="Yes"
+        UserModifiable="Yes" />
+    <Parameter
+        Name="Database"
+        DisplayName="Database Name"
+        Type="AccountProp"
+        Source="Database"
+        DefaultValue="postgres"
+        Required="No"
+        VisibleInUI="Yes"
+        UserModifiable="Yes" />
+    <Parameter
+        Name="UserName"
+        DisplayName="Database User"
+        Type="AccountProp"
+        Source="UserName"
+        Required="Yes"
+        VisibleInUI="Yes"
+        UserModifiable="No" />
+  </UserParameters>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       CLIENT SPECIFIC PARAMETERS
+       Builds the psql command line.
+       Local auth means NO -W flag and no PGPASSWORD injection;
+       PostgreSQL relies solely on pg_hba.conf trust / peer / md5.
+  ═══════════════════════════════════════════════════════════════ -->
+  <ClientSpecificParameters>
+    <!--
+      Full psql command constructed:
+        psql -h <Address> -p <Port> -U <UserName> -d <Database>
+
+      For pure local socket auth (peer), replace -h <Address> with no -h flag
+      and set Address to "localhost" or leave it empty, depending on your
+      pg_hba.conf "local" rule.
+    -->
+    <Parameter
+        Name="CommandLine"
+        Value="-h [Address] -p [Port] -U [UserName] -d [Database]" />
+  </ClientSpecificParameters>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       DISPATCHER SETTINGS
+       Controls how PSM launches and monitors the session.
+  ═══════════════════════════════════════════════════════════════ -->
+  <DispatcherSettings>
+    <Parameter Name="Dispatcher" Value="GenericMMC" />
+    <Parameter Name="PSMInitSessionTimeout" Value="30" />
+    <!-- Terminate the session if psql exits cleanly -->
+    <Parameter Name="TerminateOnApplicationClose" Value="Yes" />
+  </DispatcherSettings>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       RECORDING SETTINGS
+       PSM will record the session as a typed-text / video audit trail.
+  ═══════════════════════════════════════════════════════════════ -->
+  <RecordingSettings>
+    <Parameter Name="RecordingMode" Value="VideoAndAudit" />
+    <Parameter Name="RecordAuditText" Value="Yes" />
+    <Parameter Name="RecordAuditCommands" Value="Yes" />
+    <Parameter Name="RecordAuditCommandResponses" Value="Yes" />
+  </RecordingSettings>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       ALLOWED SAFES
+       Restrict which CyberArk Safes may use this Connection Component.
+       Use "*" to allow all safes, or list specific safe names.
+  ═══════════════════════════════════════════════════════════════ -->
+  <AllowedSafes Pattern="*" />
+
+</ConnectionComponent>
