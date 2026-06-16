@@ -6,6 +6,20 @@ This folder contains PowerShell scripts for managing and reporting CyberArk PAS 
 
 ## Scripts
 
+### Choosing the right script
+
+If you're unsure which of the four scripts fits your task, use the guide below to
+pick the best match for your workflow:
+
+| When you need to... | Use this script | Why it's the best fit |
+| --- | --- | --- |
+| Report on or export accounts based on filters | `Get-Accounts.ps1` | Purpose-built for discovery and reporting, with CSV export support. |
+| Update account properties in place | `Update-Account.ps1` | Accepts parameter/value pairs to modify attributes on existing accounts. |
+| Trigger CPM actions (Verify/Change/Reconcile) in bulk | `Invoke-BulkAccountActions.ps1` | Wraps the bulk action REST endpoints with flexible filtering to target the right accounts. |
+| Relocate an account to another safe | `Move-Account.ps1` | Validates safes and issues the move request, optionally renaming and retaining permissions. |
+
+---
+
 ### 1. Get-Accounts.ps1
 **Purpose:**
 Enumerate, report, and export account information from CyberArk PAS.
@@ -88,6 +102,29 @@ Invoke-BulkAccountActions.ps1 -PVWAURL https://mydomain.com/PasswordVault -CPMDi
 
 # Verify all accounts marked as CPMDisabled OR failed accounts
 Invoke-BulkAccountActions.ps1 -PVWAURL https://mydomain.com/PasswordVault -CPMDisabled -FailedOnly -AccountsAction "Verify"
+```
+
+---
+
+### 4. Move-Account.ps1
+**Purpose:**
+Relocate an existing account from its current Safe to another Safe via the REST API.
+
+**Usage:**
+```powershell
+Move-Account.ps1 -PVWAURL <string> -ID <string> -DestinationSafeName <string> [-SourceSafeName <string>] [-DestinationFolder <string>] [-NewAccountName <string>] [-RetainCurrentOwners <bool>] [-RetainCurrentPermissions <bool>] [-DisableSSLVerify] [-logonToken <token>] [-PVWACredentials <PSCredential>]
+```
+
+**Examples:**
+```powershell
+# Move an account and retain its owners and permissions
+Move-Account.ps1 -PVWAURL https://mydomain.com/PasswordVault -ID 12_34 -DestinationSafeName "TargetSafe"
+
+# Move an account to a sub-folder and rename it
+Move-Account.ps1 -PVWAURL https://mydomain.com/PasswordVault -ID 12_34 -DestinationSafeName "TargetSafe" -DestinationFolder "Unix Servers" -NewAccountName "svc-app-01"
+
+# Use an existing logon token when moving the account
+Move-Account.ps1 -PVWAURL https://mydomain.com/PasswordVault -ID 12_34 -DestinationSafeName "TargetSafe" -logonToken $token
 ```
 
 ---
